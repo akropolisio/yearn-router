@@ -1,0 +1,25 @@
+# automatically fetch contract sources from Etherscan
+autofetch_sources: True
+
+reports:
+
+networks:
+  default: mainnet-fork
+  development:
+    cmd_settings:
+      unlock:
+        - 0x66aB6D9362d4F35596279692F0251Db635165871
+
+compiler:
+  solc:
+    version: 0.8.13
+    remappings:
+      - '@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0'
+      - '@oz-upgradeable=OpenZeppelin/openzeppelin-contracts-upgradeable@4.5.2'
+      - '@yearn-vaults=yearn/yearn-vaults@0.4.3'
+dependencies:
+  - OpenZeppelin/openzeppelin-contracts@4.5.0
+  - OpenZeppelin/openzeppelin-contracts-upgradeable@4.5.2
+  - yearn/yearn-vaults@0.4.3
+
+dotenv: ./.env

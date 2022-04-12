@@ -1,0 +1,25 @@
+# Brownie
+__pycache__
+.history
+.hypothesis/
+build/
+reports/
+.env
+venv/
+venvs/
+cache/
+artifacts/
+hardhat/
+OpenZeppelin/
+flattened/
+out/
+lib/
+verification_sources/
+yearn/
+
+# Node/npm
+node_modules/
+node_modules/.yarn-integrity
+
+# Poetry
+poetry.lock

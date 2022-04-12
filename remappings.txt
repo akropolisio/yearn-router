@@ -1,0 +1,4 @@
+@openzeppelin/=OpenZeppelin/openzeppelin-contracts@4.5.0/
+@oz-upgradeable/=OpenZeppelin/openzeppelin-contracts-upgradeable@4.5.2/
+ds-test/=lib/ds-test/src/
+@yearn-vaults/=yearn/yearn-vaults@0.4.3/
