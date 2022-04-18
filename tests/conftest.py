@@ -1,5 +1,8 @@
 import pytest
 from brownie import Contract
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 
 @pytest.fixture(scope="session")
@@ -105,9 +108,9 @@ def live_vault(yearn_vaults):
 
 
 @pytest.fixture
-def live_shape_shift_router(ShapeShiftDAORouter, affiliate, live_registry):
+def live_shape_shift_router(YearnRouter, affiliate, live_registry):
     yield affiliate.deploy(
-        ShapeShiftDAORouter,
+        YearnRouter,
         live_registry
     )
 
