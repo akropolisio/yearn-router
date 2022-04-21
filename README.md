@@ -1,4 +1,4 @@
-# yearn-proxy
+# yearn-router
 
 A routing contract for Yearn vaults.
 For more on this please see [Yearn Documentation](https://docs.yearn.finance/partners/integration_guide#delegated-deposit).
@@ -31,28 +31,12 @@ For more on this please see [Yearn Documentation](https://docs.yearn.finance/par
 - click F1 and run `>Remote-Containers: Reopen in Container`
 - wait until all dependencies are installed (you will see the message "Done. Press any key to close the terminal." in the terminal `Configuring`)
 
-#### Manual
+#### Local
 
 - you will need Python 3.8 and Node.js >=14.x
-- install ganache-cli
+- install dependencies:
   ```bash
-  npm install -g ganache-cli
-  ```
-- install python requirements
-  ```bash
-  pip install -r requirements.txt
-  ```
-- install hardhat (brownie compatible version of hardhat in order to use arbitrum properly)
-  ```bash
-  sh ./arb-deploy.sh
-  ```
-- install contracts dependencies
-  ```bash
-  sh ./security/clone-packages.sh
-  ```
-- update brownie networks
-  ```bash
-  brownie networks import network-config.yaml true
+  make clean && make install-all
   ```
 
 ### Setup .env
