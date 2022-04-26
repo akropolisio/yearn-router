@@ -1,0 +1,14 @@
+development:
+  - name: Rinkeby Fork
+    id: rinkeby-fork
+    cmd: ganache-cli
+    host: http://127.0.0.1
+    timeout: 120
+    cmd_settings:
+      port: 8545
+      gas_limit: 20000000
+      accounts: 10
+      evm_version: istanbul
+      mnemonic: brownie
+      fork: rinkeby
+      chain_id: 4

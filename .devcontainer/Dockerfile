@@ -19,4 +19,4 @@ RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
 # install global node packages.
-RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install -g ganache@7.0.3" 2>&1
+RUN su vscode -c "source /usr/local/share/nvm/nvm.sh" 2>&1

@@ -4,15 +4,15 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@oz-upgradeable/contracts/access/OwnableUpgradeable.sol";
 
 import "../interfaces/YearnAPI.sol";
 
 /**
- * Adapted from the Yearn BaseRouter for Shapeshift's use case of a router that forward native vault tokens
+ * Adapted from the Yearn BaseRouter that forwards native vault tokens
  * to the caller and does not hold any funds or assets (vault tokens or other ERC20 tokens)
  */
-contract YearnRouter is Ownable {
+contract YearnRouter is OwnableUpgradeable {
     RegistryAPI public registry;
 
     // ERC20 Unlimited Approvals (short-circuits VaultAPI.transferFrom)
@@ -25,7 +25,9 @@ contract YearnRouter is Ownable {
     uint256 constant MIGRATE_EVERYTHING = type(uint256).max;
     uint256 constant MAX_VAULT_ID = type(uint256).max;
 
-    constructor(address yearnRegistry) {
+    function initialize(address yearnRegistry) public initializer {
+        __Ownable_init();
+
         // Recommended to use `v2.registry.ychad.eth`
         registry = RegistryAPI(yearnRegistry);
     }
@@ -219,12 +221,12 @@ contract YearnRouter is Ownable {
 
             shares = vault.deposit(amount, recipient);
 
-            uint256 afterWithdrawBal = token.balanceOf(address(this));
-            if (afterWithdrawBal > beforeBal)
+            uint256 afterDepositBal = token.balanceOf(address(this));
+            if (afterDepositBal > beforeBal)
                 SafeERC20.safeTransfer(
                     token,
                     depositor,
-                    afterWithdrawBal - beforeBal
+                    afterDepositBal - beforeBal
                 );
         } else {
             shares = vault.deposit(amount, recipient);
