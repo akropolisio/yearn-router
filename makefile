@@ -1,7 +1,7 @@
 .ONESHELL:
 
 install-all:
-	npm install -g ganache-cli@6.12.2
+	npm install -g ganache@7.0.3
 	pip install -r requirements/requirements.txt
 	$(MAKE) install-contracts-deps
 	yarn

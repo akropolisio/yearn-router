@@ -1,3 +1,2 @@
 -c constraints.txt
-eth-brownie==1.17.0
-ape-safe==0.5.1
+eth-brownie==1.18.1

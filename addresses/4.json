@@ -1,8 +1,9 @@
 {
-  "create_call": "0x7cbB62EaA69F79e6873cD1ecB2392971036cFAa4",
   "gnosis_safe": "0x9479f7b0175fbDBB87bBCadaAd39364008D9410C",
   "vault_registry": "0x1934f8CA1645cADC2136306Bc8fb461D94125a82",
   "proxy_admin": "0xe0C70AFE7a7a4C24D3e0d660D55Cd57a39cd28b6",
   "proxy": "0xCe3682b4FA59B0E54a40Ffb9D1BC0a2C9DebA9d5",
-  "implementation": "0xCf66D03d57F631cd4E0115DA1c9B0ceD11034c6b"
+  "implementations": [
+    "0xCf66D03d57F631cd4E0115DA1c9B0ceD11034c6b"
+  ]
 }
