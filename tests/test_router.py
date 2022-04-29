@@ -266,3 +266,79 @@ def test_withdraw_with_direct_deposit(token, vault, yearn_router, user):
     assert vault.allowance(yearn_router, vault) == 0
     assert token.balanceOf(user) == 10000
     assert token.balanceOf(yearn_router) == 10000
+
+
+@pytest.mark.parametrize("withdraw_amount_divider", [2, 1])
+def test_withdraw_shares(token, yearn_router, user,
+                         withdraw_amount_divider, vault_with_user_deposit):
+    vault = vault_with_user_deposit
+
+    vault_id = yearn_router.numVaults(token) - 1
+
+    before_user_vault_balance = vault.balanceOf(user)
+    share_factor = 10**vault.decimals() / vault.pricePerShare()
+    shares_amount = before_user_vault_balance / withdraw_amount_divider
+    expected_amount = round(shares_amount / share_factor)
+
+    yearn_router.withdrawShares(
+        token, user, shares_amount, vault_id, {"from": user})
+
+    assert vault.balanceOf(yearn_router) == 0
+    assert vault.balanceOf(user) == before_user_vault_balance - shares_amount
+    assert token.balanceOf(yearn_router) == 10000
+    # NOTE: Potential for tiny dust loss
+    assert expected_amount - 10 <= token.balanceOf(
+        user) <= expected_amount
+
+
+@pytest.mark.parametrize("withdraw_amount_divider", [2, 1])
+def test_withdraw_shares_with_recipient(token, yearn_router, user, random_address,
+                                        withdraw_amount_divider, vault_with_user_deposit):
+    vault = vault_with_user_deposit
+
+    vault_id = yearn_router.numVaults(token) - 1
+
+    before_user_vault_balance = vault.balanceOf(user)
+    share_factor = 10**vault.decimals() / vault.pricePerShare()
+    shares_amount = before_user_vault_balance / withdraw_amount_divider
+    expected_amount = round(shares_amount / share_factor)
+
+    yearn_router.withdrawShares(
+        token, random_address, shares_amount, vault_id, {"from": user})
+
+    assert vault.balanceOf(yearn_router) == 0
+    assert vault.balanceOf(user) == before_user_vault_balance - shares_amount
+    assert token.balanceOf(yearn_router) == 10000
+    assert token.balanceOf(user) == 0
+    # NOTE: Potential for tiny dust loss
+    assert expected_amount - 10 <= token.balanceOf(
+        random_address) <= expected_amount
+
+
+def test_withdraw_all_shares(token, yearn_router, user, vault_with_user_deposit):
+    vault = vault_with_user_deposit
+
+    vault_id = yearn_router.numVaults(token) - 1
+    yearn_router.withdrawShares(token, user, vault_id, {"from": user})
+
+    assert vault.balanceOf(yearn_router) == 0
+    assert vault.balanceOf(user) == 0
+    assert token.balanceOf(yearn_router) == 10000
+    # NOTE: Potential for tiny dust loss
+    assert 10000 - 10 <= token.balanceOf(user) <= 10000
+
+
+def test_withdraw_all_shares_with_recipient(token, yearn_router, user,
+                                            random_address, vault_with_user_deposit):
+    vault = vault_with_user_deposit
+
+    vault_id = yearn_router.numVaults(token) - 1
+    yearn_router.withdrawShares(
+        token, random_address, vault_id, {"from": user})
+
+    assert vault.balanceOf(yearn_router) == 0
+    assert vault.balanceOf(user) == 0
+    assert token.balanceOf(yearn_router) == 10000
+    assert token.balanceOf(user) == 0
+    # NOTE: Potential for tiny dust loss
+    assert 10000 - 10 <= token.balanceOf(random_address) <= 10000
