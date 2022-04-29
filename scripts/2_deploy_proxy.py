@@ -1,7 +1,7 @@
 from brownie import UtilProxy, YearnRouter, accounts, network
 
 from scripts.utils.constants import get_utils_addresses, set_proxy_address
-from scripts.utils.get_proxied_router import get_proxied_router
+from scripts.utils.get_proxied_implementation import get_proxied_implementation
 
 
 def main():
@@ -34,7 +34,8 @@ def main():
         set_proxy_address(proxy_address)
 
         gnosis_safe_address = utils_addresses["gnosis_safe"]
-        yearn_router = get_proxied_router(proxy_address)
+        yearn_router = get_proxied_implementation(
+            YearnRouter, "YearnRouter", proxy_address)
         yearn_router.transferOwnership(gnosis_safe_address, {"from": deployer})
         print(
             f"Transferred Proxy implementation ownership from {deployer} to {gnosis_safe_address}")

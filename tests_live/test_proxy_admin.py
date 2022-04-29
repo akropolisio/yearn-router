@@ -1,79 +1,88 @@
 import brownie
 import pytest
 
-
-def test_deployment(live_yearn_router, live_proxied_router, live_proxy_admin, live_proxy, live_registry):
-    assert live_proxy_admin.getProxyAdmin(live_proxy) == live_proxy_admin
-    assert live_proxy_admin.getProxyImplementation(
-        live_proxy) == live_yearn_router
-    assert live_proxied_router.registry() == live_registry
+from scripts.utils.get_proxied_implementation import get_proxied_implementation
 
 
-def test_transferOwnership(owner, random_address, live_proxied_router, live_proxy_admin):
-    assert live_proxied_router.owner() == owner
-    assert live_proxy_admin.owner() == owner
-
-    live_proxied_router.transferOwnership(random_address, {"from": owner})
-    live_proxy_admin.transferOwnership(random_address, {"from": owner})
-    assert live_proxied_router.owner() == random_address
-    assert live_proxy_admin.owner() == random_address
+def test_deployment(yearn_router, proxied_router, proxy_admin, proxy, registry):
+    assert proxy_admin.getProxyAdmin(proxy) == proxy_admin
+    assert proxy_admin.getProxyImplementation(
+        proxy) == yearn_router
+    assert proxied_router.registry() == registry
 
 
-def test_change_proxy_admin(owner, random_address, live_proxy_admin, live_proxy, UtilProxyAdmin):
+def test_transferOwnership(owner, random_address, proxied_router, proxy_admin):
+    assert proxied_router.owner() == owner
+    assert proxy_admin.owner() == owner
+
+    proxied_router.transferOwnership(random_address, {"from": owner})
+    proxy_admin.transferOwnership(random_address, {"from": owner})
+    assert proxied_router.owner() == random_address
+    assert proxy_admin.owner() == random_address
+
+
+def test_change_proxy_admin(owner, random_address, proxy_admin, proxy, UtilProxyAdmin):
     new_admin = owner.deploy(UtilProxyAdmin)
 
     with brownie.reverts():
-        live_proxy_admin.changeProxyAdmin(
-            live_proxy, new_admin, {"from": random_address})
+        proxy_admin.changeProxyAdmin(
+            proxy, new_admin, {"from": random_address})
 
-    live_proxy_admin.changeProxyAdmin(live_proxy, new_admin, {"from": owner})
-    assert new_admin.getProxyAdmin(live_proxy) == new_admin
+    proxy_admin.changeProxyAdmin(proxy, new_admin, {"from": owner})
+    assert new_admin.getProxyAdmin(proxy) == new_admin
 
     with brownie.reverts():
-        live_proxy.changeAdmin(owner, {"from": owner})
-        live_proxy_admin.getProxyAdmin(live_proxy)
+        proxy.changeAdmin(owner, {"from": owner})
+
+    with brownie.reverts():
+        proxy_admin.getProxyAdmin(proxy)
 
 
-def test_upgrade(owner, random_address, live_registry, live_proxy_admin, live_proxy, YearnRouter, NewYearnRouter):
+def test_upgrade(owner, random_address, registry, proxy_admin, proxy, NewYearnRouter):
     new_implementation = owner.deploy(NewYearnRouter)
-    new_implementation.initialize(live_registry)
+    new_implementation.initialize(registry)
     new_implementation.setNewVariable("22")
 
     with brownie.reverts():
-        live_proxy_admin.upgrade(live_proxy, new_implementation, {
-                                 "from": random_address})
-        live_proxy.upgradeTo(new_implementation, {"from": owner})
+        proxy_admin.upgrade(proxy, new_implementation, {
+            "from": random_address})
 
-    live_proxy_admin.upgrade(live_proxy, new_implementation, {"from": owner})
+    with brownie.reverts():
+        proxy.upgradeTo(new_implementation, {"from": owner})
 
-    YearnRouter.remove(live_proxy)
-    new_proxied_router = NewYearnRouter.at(live_proxy)
+    proxy_admin.upgrade(proxy, new_implementation, {"from": owner})
 
-    assert live_proxy_admin.getProxyImplementation(
-        live_proxy) == new_implementation
+    new_proxied_router = get_proxied_implementation(
+        NewYearnRouter, "NewYearnRouter", proxy.address)
+
+    assert proxy_admin.getProxyImplementation(
+        proxy) == new_implementation
     assert new_proxied_router.newVariable() == "0"
 
 
-def test_upgradeAndCall(owner, random_address, live_registry, live_proxy_admin, live_proxy, NewYearnRouter):
+def test_upgradeAndCall(owner, random_address, registry, proxy_admin, proxy, NewYearnRouter):
     new_implementation = owner.deploy(NewYearnRouter)
-    new_implementation.initialize(live_registry)
+    new_implementation.initialize(registry)
     new_implementation.setNewVariable("22")
 
     set_new_variable_call = new_implementation.setNewVariable.encode_input(
         "12")
 
     with brownie.reverts():
-        live_proxy_admin.upgradeAndCall(
-            live_proxy, new_implementation, set_new_variable_call, {"from": random_address})
-        live_proxy.upgradeToAndCall(
+        proxy_admin.upgradeAndCall(
+            proxy, new_implementation, set_new_variable_call, {"from": random_address})
+
+    with brownie.reverts():
+        proxy.upgradeToAndCall(
             new_implementation, set_new_variable_call, {"from": owner})
 
-    live_proxy_admin.upgradeAndCall(
-        live_proxy, new_implementation, set_new_variable_call, {"from": owner})
+    proxy_admin.upgradeAndCall(
+        proxy, new_implementation, set_new_variable_call, {"from": owner})
 
-    new_proxied_router = NewYearnRouter.at(live_proxy)
+    new_proxied_router = get_proxied_implementation(
+        NewYearnRouter, "NewYearnRouter", proxy.address)
 
-    assert live_proxy_admin.getProxyImplementation(
-        live_proxy) == new_implementation
-    assert new_proxied_router.registry() == live_registry
+    assert proxy_admin.getProxyImplementation(
+        proxy) == new_implementation
+    assert new_proxied_router.registry() == registry
     assert new_proxied_router.newVariable() == "12"

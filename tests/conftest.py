@@ -1,9 +1,11 @@
+# pylint: disable=redefined-outer-name
+from functools import lru_cache
+from brownie import compile_source
 import pytest
-from brownie import Contract
 
 
 @pytest.fixture(scope="session")
-def yearn_vaults(pm):
+def yearn_lib(pm):
     yield pm('yearn/yearn-vaults@0.4.3')
 
 
@@ -27,119 +29,89 @@ def random_address(accounts):
     yield accounts[3]
 
 
-@pytest.fixture(scope="session")
-def random_address_2(accounts):
-    yield accounts[4]
+# registry reverts new vault releases when vault apiVersions match
+@pytest.fixture(scope="module")
+def patch_vault_version(yearn_lib):
+    # NOTE: Cache this result so as not to trigger a recompile for every version change
+    @lru_cache
+    def _patch_vault_version(version):
+        if version is None:
+            return yearn_lib.Vault
+        else:
+            vault_source_code = yearn_lib._sources.get("Vault")
+            source = vault_source_code.replace("0.4.3", version)
+            return compile_source(source).Vyper
+
+    return _patch_vault_version
 
 
-@pytest.fixture
-def token(yearn_vaults, gov):
-    yield gov.deploy(yearn_vaults.Token, 18)
+@pytest.fixture(scope="module")
+def token(create_token):
+    yield create_token()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
+def create_token(yearn_lib, gov):
+    def _create_token() -> yearn_lib.Token:
+        return gov.deploy(yearn_lib.Token, 18)
+    yield _create_token
+
+
+@pytest.fixture(scope="module")
 def yearn_router(owner, registry, YearnRouter):
-    contract = owner.deploy(
-        YearnRouter
-    )
+    contract = owner.deploy(YearnRouter)
     contract.initialize(registry, {"from": owner})
     yield contract
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def vault(create_vault, token):
-    yield create_vault(token=token)
+    yield create_vault(token=token, version="1.0.0")
 
 
-@pytest.fixture(scope="session")
-def create_vault(accounts, yearn_vaults, live_registry, gov):
+@pytest.fixture(scope="module")
+def create_vault(accounts, registry, gov, patch_vault_version):
     rewards = accounts.add()
     guardian = accounts.add()
 
-    def create_vault(token, releaseDelta=0, governance=gov):
-        tx = live_registry.newExperimentalVault(
-            token,
-            governance,
-            guardian,
-            rewards,
-            "vault",
-            "token",
-            releaseDelta,
-            {"from": governance},
-        )
-        vault = yearn_vaults.Vault.at(tx.return_value)
+    def _create_vault(token, version):
+        _vault = patch_vault_version(version).deploy({"from": guardian})
+        _vault.initialize(token, gov, rewards, "", "", guardian, gov)
+        _vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+        registry.newRelease(_vault, {"from": gov})
+        registry.endorseVault(_vault, {"from": gov})
 
-        vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
-        return vault
+        return _vault
 
-    yield create_vault
+    yield _create_vault
 
 
-@pytest.fixture
-def registry(yearn_vaults, gov):
-    yield gov.deploy(yearn_vaults.Registry)
+@pytest.fixture(scope="module")
+def registry(create_registry):
+    yield create_registry()
 
 
-@pytest.fixture
-def new_registry(yearn_vaults, gov):
-    yield gov.deploy(yearn_vaults.Registry)
+@pytest.fixture(scope="module")
+def create_registry(yearn_lib, gov):
+    def _create_registry():
+        _registry = gov.deploy(yearn_lib.Registry)
+        _vault = gov.deploy(yearn_lib.Vault)
+        _registry.newRelease(_vault, {"from": gov})
+        return _registry
+
+    yield _create_registry
 
 
-@pytest.fixture(scope="session")
-def live_token(live_vault):
-    # this will be the address of the Curve LP token
-    token_address = live_vault.token()
-    yield Contract(token_address)
-
-
-@pytest.fixture(scope="session")
-def live_vault(yearn_vaults):
-    # yvseth
-    yield yearn_vaults.Vault.at("0x986b4aff588a109c09b50a03f42e4110e29d353f")
+# Autouse fixtures
 
 
 @pytest.fixture(scope="module", autouse=True)
-def live_yearn_router(YearnRouter, owner, live_registry):
-    contract = owner.deploy(
-        YearnRouter,
-    )
-    contract.initialize(live_registry)
-    yield contract
+def transfer_initial_tokens(token, user, yearn_router, gov):
+    token.transfer(user, 10000, {"from": gov})
 
-
-@pytest.fixture(scope="session")
-def live_registry(yearn_vaults):
-    yield yearn_vaults.Registry.at("v2.registry.ychad.eth")
-
-
-@pytest.fixture(scope="session")
-def live_vault_user(accounts):
-    user = accounts.at(
-        "0x3c0ffff15ea30c35d7a85b85c0782d6c94e1d238", force=True
-    )  # make sure this address holds big bags of want()
-    yield user
-
-
-@pytest.fixture(scope="session")
-def live_gov(live_registry, accounts):
-    yield accounts.at(live_registry.governance(), force=True)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def live_proxy_admin(owner, UtilProxyAdmin):
-    return owner.deploy(UtilProxyAdmin)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def live_proxy(owner, live_yearn_router, live_proxy_admin, live_registry, UtilProxy):
-    initializer = live_yearn_router.initialize.encode_input(live_registry)
-    return owner.deploy(UtilProxy, live_yearn_router, live_proxy_admin, initializer)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def live_proxied_router(live_proxy, UtilProxy, YearnRouter):
-    UtilProxy.remove(live_proxy)
-    return YearnRouter.at(live_proxy)
+    # transfer some random tokens to the router to ensure this doesn't effect any accounting
+    # or the invariant check.
+    token.transfer(yearn_router, 10000, {"from": gov})
 
 
 @pytest.fixture(autouse=True)
