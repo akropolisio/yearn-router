@@ -4,20 +4,19 @@ import pytest
 from scripts.utils.get_proxied_implementation import get_proxied_implementation
 
 
-def test_deployment(yearn_router, proxied_router, proxy_admin, proxy, registry):
+def test_deployment(implementation, yearn_router, proxy_admin, proxy, registry):
     assert proxy_admin.getProxyAdmin(proxy) == proxy_admin
-    assert proxy_admin.getProxyImplementation(
-        proxy) == yearn_router
-    assert proxied_router.registry() == registry
+    assert proxy_admin.getProxyImplementation(proxy) == implementation
+    assert yearn_router.registry() == registry
 
 
-def test_transferOwnership(owner, random_address, proxied_router, proxy_admin):
-    assert proxied_router.owner() == owner
+def test_transferOwnership(owner, random_address, yearn_router, proxy_admin):
+    assert yearn_router.owner() == owner
     assert proxy_admin.owner() == owner
 
-    proxied_router.transferOwnership(random_address, {"from": owner})
+    yearn_router.transferOwnership(random_address, {"from": owner})
     proxy_admin.transferOwnership(random_address, {"from": owner})
-    assert proxied_router.owner() == random_address
+    assert yearn_router.owner() == random_address
     assert proxy_admin.owner() == random_address
 
 

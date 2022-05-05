@@ -35,13 +35,6 @@ def token(yearn_lib, request):
 
 
 @pytest.fixture(scope="module")
-def yearn_router(owner, registry, YearnRouter):
-    contract = owner.deploy(YearnRouter)
-    contract.initialize(registry, {"from": owner})
-    yield contract
-
-
-@pytest.fixture(scope="module")
 def vault(yearn_lib, registry, token):
     vault_address = registry.latestVault(token)
     yield yearn_lib.Vault.at(vault_address)
@@ -71,14 +64,19 @@ def proxy_admin(owner, UtilProxyAdmin):
 
 
 @pytest.fixture(scope="module")
-def proxy(owner, yearn_router, proxy_admin, registry, UtilProxy):
-    initializer = yearn_router.initialize.encode_input(registry)
-    return owner.deploy(UtilProxy, yearn_router, proxy_admin, initializer)
+def implementation(owner, YearnRouter):
+    yield owner.deploy(YearnRouter)
 
 
 @pytest.fixture(scope="module")
-def proxied_router(YearnRouter, proxy):
-    return get_proxied_implementation(YearnRouter, "YearnRouter", proxy.address)
+def proxy(owner, implementation, proxy_admin, registry, UtilProxy):
+    initializer = implementation.initialize.encode_input(registry)
+    return owner.deploy(UtilProxy, implementation, proxy_admin, initializer)
+
+
+@pytest.fixture(scope="module")
+def yearn_router(YearnRouter, proxy):
+    return get_proxied_implementation(YearnRouter, proxy.address)
 
 
 # Autouse fixtures

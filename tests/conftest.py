@@ -95,8 +95,6 @@ def registry(create_registry):
 def create_registry(yearn_lib, gov):
     def _create_registry():
         _registry = gov.deploy(yearn_lib.Registry)
-        _vault = gov.deploy(yearn_lib.Vault)
-        _registry.newRelease(_vault, {"from": gov})
         return _registry
 
     yield _create_registry
