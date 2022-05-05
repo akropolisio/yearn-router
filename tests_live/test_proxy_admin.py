@@ -52,7 +52,7 @@ def test_upgrade(owner, random_address, registry, proxy_admin, proxy, NewYearnRo
     proxy_admin.upgrade(proxy, new_implementation, {"from": owner})
 
     new_proxied_router = get_proxied_implementation(
-        NewYearnRouter, "NewYearnRouter", proxy.address)
+        NewYearnRouter, proxy.address)
 
     assert proxy_admin.getProxyImplementation(
         proxy) == new_implementation
@@ -79,7 +79,7 @@ def test_upgradeAndCall(owner, random_address, registry, proxy_admin, proxy, New
         proxy, new_implementation, set_new_variable_call, {"from": owner})
 
     new_proxied_router = get_proxied_implementation(
-        NewYearnRouter, "NewYearnRouter", proxy.address)
+        NewYearnRouter, proxy.address)
 
     assert proxy_admin.getProxyImplementation(
         proxy) == new_implementation

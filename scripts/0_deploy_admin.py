@@ -1,6 +1,7 @@
 from brownie import UtilProxyAdmin, accounts, network
 
 from scripts.utils.constants import clear_utils_addresses, get_utils_addresses, set_proxy_admin_address
+from scripts.utils.is_fork import is_fork
 
 
 def main():
@@ -8,9 +9,8 @@ def main():
     deployer = accounts.load("deployer")
 
     current_network = network.show_active()
-    is_fork = current_network.endswith("fork")
 
-    if is_fork:
+    if is_fork(current_network):
         clear_utils_addresses()
 
     print(f"You are using the '{current_network}' network")
@@ -22,7 +22,7 @@ def main():
     if not proxy_admin_address:
         proxy_admin = UtilProxyAdmin.deploy(
             {"from": deployer},
-            publish_source=not(is_fork)
+            publish_source=not(is_fork(current_network))
         )
         proxy_admin_address = proxy_admin.address
         set_proxy_admin_address(proxy_admin_address)

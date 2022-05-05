@@ -387,11 +387,11 @@ contract YearnRouter is OwnableUpgradeable {
     }
 
     /**
-     * @notice Called to redeem the caller's shares from underlying vault, with the proceeds distributed to recipient.
+     * @notice Called to redeem all caller's shares from underlying vault, with the proceeds distributed to recipient.
      * @dev The caller must approve this contract to use their vault shares or this call will revert.
-     * @param token Address of the ERC20 token to withdraw from the vault
-     * @param recipient Address to receive the withdrawn tokens
-     * @param vaultId Vault id to pull from; 0 to start at the the beginning
+     * @param token Address of the ERC20 token to withdraw from the vault.
+     * @param recipient Address to receive the withdrawn tokens.
+     * @param vaultId Vault id to pull from.
      * @return The number of tokens received by recipient.
      */
     function withdrawShares(
@@ -412,10 +412,10 @@ contract YearnRouter is OwnableUpgradeable {
     /**
      * @notice Called to redeem the caller's shares from underlying vault, with the proceeds distributed to recipient.
      * @dev The caller must approve this contract to use their vault shares or this call will revert.
-     * @param token Address of the ERC20 token to withdraw from the vault
-     * @param recipient Address to receive the withdrawn tokens
+     * @param token Address of the ERC20 token to withdraw from the vault.
+     * @param recipient Address to receive the withdrawn tokens.
      * @param sharesAmount Maximum number of shares to withdraw from the vault; If `WITHDRAW_EVERYTHING`, just withdraw everything.
-     * @param vaultId Vault id to pull from; 0 to start at the the beginning
+     * @param vaultId Vault id to pull from.
      * @return The number of tokens received by recipient.
      */
     function withdrawShares(
@@ -441,7 +441,7 @@ contract YearnRouter is OwnableUpgradeable {
      * @param withdrawer Address to pull the vault shares from. SECURITY SENSITIVE.
      * @param recipient Address to receive the withdrawn tokens
      * @param sharesAmount Maximum number of tokens to withdraw from the vault; If `WITHDRAW_EVERYTHING`, just withdraw everything.
-     * @param vaultId Vault id to pull from; 0 to start at the the beginning
+     * @param vaultId Vault id to pull from.
      * @return withdrawn The number of tokens received by recipient.
      */
     function _withdrawShares(

@@ -15,10 +15,11 @@
   "scripts": {
     "lint": "prettier --write interfaces/**.sol contracts/**.sol src/**.sol **/*.json",
     "lint:check": "prettier --check **/*.sol **/*.json",
-    "sec:flatten": "sh ./security/flattener-run.sh",
     "format:test:lint": "black --check tests",
     "format:test:fix": "black . tests",
-    "postinstall": "husky install"
+    "postinstall": "husky install",
+    "test:dev": "brownie test --network development",
+    "test": "brownie test tests_live/* --network mainnet-fork"
   },
   "config": {
     "commitizen": {

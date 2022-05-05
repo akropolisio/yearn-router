@@ -3,7 +3,7 @@ from brownie.network.contract import ProjectContract
 from brownie.project.main import Project, get_loaded_projects
 
 
-def get_proxied_implementation(ImplContract, contract_name, proxy_address):
+def get_proxied_implementation(ImplContract, proxy_address):
     impl_proxy: ImplContract
     try:
         impl_proxy = ImplContract.at(proxy_address)
@@ -13,6 +13,6 @@ def get_proxied_implementation(ImplContract, contract_name, proxy_address):
             project,
             build={
                 "abi": ImplContract.abi,
-                "contractName": contract_name,
+                "contractName": ImplContract.get_verification_info()['contract_name'],
             }, address=proxy_address)
     return impl_proxy

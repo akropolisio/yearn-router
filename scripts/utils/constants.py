@@ -1,13 +1,23 @@
 import json
+import shutil
+import os
 
 from brownie import chain, network
+from scripts.utils.is_fork import is_fork
 
 
 def get_utils_path():
-    is_fork = network.show_active().endswith("fork")
-    if is_fork:
-        return "addresses/fork.json"
-    return f"addresses/{chain.id}.json"
+    fork_utils_path = f"addresses/{chain.id}_fork.json"
+    live_utils_path = f"addresses/{chain.id}.json"
+
+    current_network = network.show_active()
+
+    if is_fork(current_network):
+        if not os.path.exists(fork_utils_path):
+            shutil.copyfile(live_utils_path, fork_utils_path)
+        return fork_utils_path
+
+    return live_utils_path
 
 
 def get_utils_addresses():
@@ -43,8 +53,8 @@ def clear_utils_addresses():
     if is_empty:
         return
 
-    is_fork = network.show_active().endswith("fork")
-    if not is_fork:
+    current_network = network.show_active()
+    if not is_fork(current_network):
         confirmation = input(
             "!!! This will remove contract addresses. Type 'yes' to confirm: ")
         if confirmation != "yes":
@@ -63,4 +73,3 @@ def set_utility_address(key, value):
         file.seek(0)
         json.dump(data, file, indent=2)
         file.truncate()
-        file.close()
