@@ -5,15 +5,13 @@ from scripts.utils.is_fork import is_fork
 
 
 def main():
+    print(f"You are using the '{network.show_active()}' network")
+
     accounts.clear()
     deployer = accounts.load("deployer")
 
-    current_network = network.show_active()
-
-    if is_fork(current_network):
+    if is_fork():
         clear_utils_addresses()
-
-    print(f"You are using the '{current_network}' network")
 
     utils_addresses = get_utils_addresses()
 
@@ -22,7 +20,7 @@ def main():
     if not proxy_admin_address:
         proxy_admin = UtilProxyAdmin.deploy(
             {"from": deployer},
-            publish_source=not(is_fork(current_network))
+            publish_source=not(is_fork())
         )
         proxy_admin_address = proxy_admin.address
         set_proxy_admin_address(proxy_admin_address)
