@@ -140,6 +140,24 @@ contract YearnRouter is OwnableUpgradeable {
         }
     }
 
+    function getVaultId(address token, address vault)
+        external
+        view
+        returns (uint256)
+    {
+        uint256 _numVaults = registry.numVaults(token);
+        uint256 vaultId = _numVaults;
+        for (uint256 i = 0; i < _numVaults; i++) {
+            VaultAPI _vault = registry.vaults(token, i);
+            if (address(_vault) == vault) {
+                vaultId = i;
+                break;
+            }
+        }
+        require(vaultId < _numVaults, "vault not registered");
+        return vaultId;
+    }
+
     /**
      * @notice Called to deposit the caller's tokens into the most-current vault, crediting the minted shares to recipient.
      * @dev The caller must approve this contract to utilize the specified ERC20 or this call will revert.
