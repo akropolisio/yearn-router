@@ -238,3 +238,15 @@ def test_withdraw_all_shares_with_recipient(token, yearn_router, user,
     assert token.balanceOf(user) == 0
     # NOTE: Potential for tiny dust loss
     assert 10000 - 10 <= token.balanceOf(random_address) <= 10000
+
+
+def test_getVaultId(token, yearn_router, vaults, random_address):
+    with brownie.reverts():
+        yearn_router.getVaultId(token, random_address)
+
+    with brownie.reverts():
+        yearn_router.getVaultId(random_address, brownie.ZERO_ADDRESS)
+
+    for index, vault_address in enumerate(vaults):
+        vault_id = yearn_router.getVaultId(token, vault_address)
+        assert vault_id == index

@@ -41,6 +41,15 @@ def vault(yearn_lib, registry, token):
 
 
 @pytest.fixture(scope="module")
+def vaults(token, yearn_router, registry):
+    num_vaults = yearn_router.numVaults(token)
+    vault_addresses = []
+    for vault_id in range(num_vaults):
+        vault_addresses.append(registry.vaults(token, vault_id))
+    yield vault_addresses
+
+
+@pytest.fixture(scope="module")
 def registry(yearn_lib):
     yield yearn_lib.Registry.at("v2.registry.ychad.eth")
 
