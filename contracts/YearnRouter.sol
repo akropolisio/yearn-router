@@ -25,6 +25,19 @@ contract YearnRouter is OwnableUpgradeable {
     uint256 constant MIGRATE_EVERYTHING = type(uint256).max;
     uint256 constant MAX_VAULT_ID = type(uint256).max;
 
+    event Deposit(
+        address recipient,
+        address vault,
+        uint256 shares,
+        uint256 amount
+    );
+    event Withdraw(
+        address recipient,
+        address vault,
+        uint256 shares,
+        uint256 amount
+    );
+
     function initialize(address yearnRegistry) public initializer {
         __Ownable_init();
 
@@ -231,24 +244,29 @@ contract YearnRouter is OwnableUpgradeable {
             SafeERC20.safeApprove(token, address(vault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
-        if (amount == DEPOSIT_EVERYTHING) amount = token.balanceOf(depositor);
+        uint256 depositorBeforeBal = token.balanceOf(depositor);
+
+        if (amount == DEPOSIT_EVERYTHING) amount = depositorBeforeBal;
 
         if (pullFunds) {
-            uint256 beforeBal = token.balanceOf(address(this));
+            uint256 routerBeforeBal = token.balanceOf(address(this));
             SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
 
             shares = vault.deposit(amount, recipient);
 
-            uint256 afterDepositBal = token.balanceOf(address(this));
-            if (afterDepositBal > beforeBal)
+            uint256 routerAfterBal = token.balanceOf(address(this));
+            if (routerAfterBal > routerBeforeBal)
                 SafeERC20.safeTransfer(
                     token,
                     depositor,
-                    afterDepositBal - beforeBal
+                    routerAfterBal - routerBeforeBal
                 );
         } else {
             shares = vault.deposit(amount, recipient);
         }
+        uint256 depositorAfterBal = token.balanceOf(depositor);
+        uint256 depositedAmount = depositorBeforeBal - depositorAfterBal;
+        emit Deposit(recipient, address(vault), shares, depositedAmount);
     }
 
     /**
@@ -334,7 +352,7 @@ contract YearnRouter is OwnableUpgradeable {
      * @param amount Maximum number of tokens to withdraw from all vaults; actual withdrawal may be less. If `WITHDRAW_EVERYTHING`, just withdraw everything.
      * @param firstVaultId First vault id to pull from; 0 to start at the the beginning
      * @param lastVaultId Last vault id to pull from; `MAX_VAULT_ID` to withdraw from all vaults
-     * @return withdrawn The number of tokens received by recipient.
+     * @return totalWithdrawn The number of tokens received by recipient.
      */
     function _withdraw(
         IERC20 token,
@@ -343,22 +361,22 @@ contract YearnRouter is OwnableUpgradeable {
         uint256 amount,
         uint256 firstVaultId,
         uint256 lastVaultId
-    ) internal returns (uint256 withdrawn) {
+    ) internal returns (uint256 totalWithdrawn) {
         require(firstVaultId <= lastVaultId);
 
-        uint256 _lastVaultId = lastVaultId;
-        if (_lastVaultId == MAX_VAULT_ID)
-            _lastVaultId = registry.numVaults(address(token)) - 1;
+        if (lastVaultId == MAX_VAULT_ID)
+            lastVaultId = registry.numVaults(address(token)) - 1;
 
         for (
             uint256 i = firstVaultId;
-            withdrawn + 1 < amount && i <= _lastVaultId;
+            totalWithdrawn + 1 < amount && i <= lastVaultId;
             i++
         ) {
             VaultAPI vault = registry.vaults(address(token), i);
 
+            uint256 withdrawerShares = vault.balanceOf(withdrawer);
             uint256 availableShares = Math.min(
-                vault.balanceOf(withdrawer),
+                withdrawerShares,
                 vault.maxAvailableShares()
             );
             // Restrict by the allowance that `withdrawer` has given to this contract
@@ -371,7 +389,7 @@ contract YearnRouter is OwnableUpgradeable {
             uint256 maxShares;
             if (amount != WITHDRAW_EVERYTHING) {
                 // Compute amount to withdraw fully to satisfy the request
-                uint256 estimatedShares = ((amount - withdrawn) *
+                uint256 estimatedShares = ((amount - totalWithdrawn) *
                     10**vault.decimals()) / vault.pricePerShare();
 
                 // Limit amount to withdraw to the maximum made available to this contract
@@ -382,7 +400,7 @@ contract YearnRouter is OwnableUpgradeable {
                 maxShares = availableShares;
             }
 
-            uint256 beforeBal = vault.balanceOf(address(this));
+            uint256 routerBeforeBal = vault.balanceOf(address(this));
 
             SafeERC20.safeTransferFrom(
                 vault,
@@ -391,14 +409,23 @@ contract YearnRouter is OwnableUpgradeable {
                 maxShares
             );
 
-            withdrawn += vault.withdraw(maxShares, recipient);
+            uint256 withdrawn = vault.withdraw(maxShares, recipient);
+            totalWithdrawn += withdrawn;
 
-            uint256 afterWithdrawBal = vault.balanceOf(address(this));
-            if (afterWithdrawBal > beforeBal) {
+            withdrawerShares -= vault.balanceOf(withdrawer);
+            emit Withdraw(
+                recipient,
+                address(vault),
+                withdrawerShares,
+                withdrawn
+            );
+
+            uint256 routerAfterBal = vault.balanceOf(address(this));
+            if (routerAfterBal > routerBeforeBal) {
                 SafeERC20.safeTransfer(
                     vault,
                     withdrawer,
-                    afterWithdrawBal - beforeBal
+                    routerAfterBal - routerBeforeBal
                 );
             }
         }
@@ -471,8 +498,9 @@ contract YearnRouter is OwnableUpgradeable {
     ) internal returns (uint256 withdrawn) {
         VaultAPI vault = registry.vaults(address(token), vaultId);
 
+        uint256 sharesBeforeWithdrawal = vault.balanceOf(withdrawer);
         uint256 availableShares = Math.min(
-            vault.balanceOf(withdrawer),
+            sharesBeforeWithdrawal,
             vault.maxAvailableShares()
         );
 
@@ -484,18 +512,22 @@ contract YearnRouter is OwnableUpgradeable {
             maxShares = availableShares;
         }
 
-        uint256 beforeBal = vault.balanceOf(address(this));
+        uint256 routerBeforeBal = vault.balanceOf(address(this));
 
         SafeERC20.safeTransferFrom(vault, withdrawer, address(this), maxShares);
 
         withdrawn = vault.withdraw(maxShares, recipient);
 
-        uint256 afterWithdrawBal = vault.balanceOf(address(this));
-        if (afterWithdrawBal > beforeBal) {
+        uint256 sharesAfterWithdrawal = vault.balanceOf(withdrawer);
+        uint256 shares = sharesBeforeWithdrawal - sharesAfterWithdrawal;
+        emit Withdraw(recipient, address(vault), shares, withdrawn);
+
+        uint256 routerAfterBal = vault.balanceOf(address(this));
+        if (routerAfterBal > routerBeforeBal) {
             SafeERC20.safeTransfer(
                 vault,
                 withdrawer,
-                afterWithdrawBal - beforeBal
+                routerAfterBal - routerBeforeBal
             );
         }
     }
