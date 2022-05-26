@@ -69,12 +69,19 @@ def test_deposit(token, vault, yearn_router, user):
     assert vault.balanceOf(yearn_router) == 0
 
     token.approve(yearn_router, 10000, {"from": user})
-    yearn_router.deposit(token, user, 10000, {"from": user})
+    tx_receipt = yearn_router.deposit(token, user, 10000, {"from": user})
 
     assert vault.balanceOf(user) == 10000
     assert vault.balanceOf(yearn_router) == 0
     assert token.balanceOf(user) == 0
     assert token.balanceOf(yearn_router) == 10000
+
+    deposit_events = tx_receipt.events["Deposit"]
+    assert len(deposit_events) == 1
+    assert deposit_events["recipient"] == user.address
+    assert deposit_events["vault"] == vault.address
+    assert deposit_events["shares"] == 10000
+    assert deposit_events["amount"] == 10000
 
 
 def test_deposit_with_recipient(token, vault, yearn_router, user, random_address):
@@ -86,7 +93,8 @@ def test_deposit_with_recipient(token, vault, yearn_router, user, random_address
     assert vault.balanceOf(random_address) == 0
 
     token.approve(yearn_router, 10000, {"from": user})
-    yearn_router.deposit(token, random_address, 10000, {"from": user})
+    tx_receipt = yearn_router.deposit(
+        token, random_address, 10000, {"from": user})
 
     assert vault.balanceOf(random_address) == 10000
     assert vault.balanceOf(user) == 0
@@ -94,6 +102,13 @@ def test_deposit_with_recipient(token, vault, yearn_router, user, random_address
 
     assert token.balanceOf(user) == 0
     assert token.balanceOf(yearn_router) == 10000
+
+    deposit_events = tx_receipt.events["Deposit"]
+    assert len(deposit_events) == 1
+    assert deposit_events["recipient"] == random_address.address
+    assert deposit_events["vault"] == vault.address
+    assert deposit_events["shares"] == 10000
+    assert deposit_events["amount"] == 10000
 
 
 @pytest.fixture
@@ -115,12 +130,20 @@ def test_vault_with_user_deposit_fixture(user, yearn_router, vault_with_user_dep
 def test_withdraw(token, yearn_router, user, withdraw_amount, vault_with_user_deposit):
     vault = vault_with_user_deposit
 
-    yearn_router.withdraw(token, user, withdraw_amount, {"from": user})
+    tx_receipt = yearn_router.withdraw(
+        token, user, withdraw_amount, {"from": user})
 
     assert token.balanceOf(yearn_router) == 10000
     assert token.balanceOf(user) == withdraw_amount
     assert vault.balanceOf(yearn_router) == 0
     assert vault.balanceOf(user) == 10000 - withdraw_amount
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == user.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == withdraw_amount
+    assert withdraw_events["amount"] == withdraw_amount
 
 
 @pytest.mark.parametrize("withdraw_amount", [5000, 10000])
@@ -128,8 +151,8 @@ def test_withdraw_with_recipient(token, yearn_router, user, random_address,
                                  vault_with_user_deposit, withdraw_amount):
     vault = vault_with_user_deposit
 
-    yearn_router.withdraw(token, random_address,
-                          withdraw_amount, {"from": user})
+    tx_receipt = yearn_router.withdraw(token, random_address,
+                                       withdraw_amount, {"from": user})
 
     assert token.balanceOf(yearn_router) == 10000
     assert token.balanceOf(user) == 0
@@ -137,26 +160,47 @@ def test_withdraw_with_recipient(token, yearn_router, user, random_address,
     assert vault.balanceOf(yearn_router) == 0
     assert vault.balanceOf(user) == 10000 - withdraw_amount
 
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == random_address.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == withdraw_amount
+    assert withdraw_events["amount"] == withdraw_amount
+
 
 def test_withdraw_all(token, yearn_router, user, vault_with_user_deposit):
     vault = vault_with_user_deposit
 
-    yearn_router.withdraw(token, user, {"from": user})
+    tx_receipt = yearn_router.withdraw(token, user, {"from": user})
 
     assert token.balanceOf(yearn_router) == 10000
     assert vault.balanceOf(yearn_router) == 0
     assert token.balanceOf(user) == 10000
 
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == user.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == 10000
+    assert withdraw_events["amount"] == 10000
+
 
 def test_withdraw_all_with_recipient(token, yearn_router, user, random_address, vault_with_user_deposit):
     vault = vault_with_user_deposit
 
-    yearn_router.withdraw(token, random_address, {"from": user})
+    tx_receipt = yearn_router.withdraw(token, random_address, {"from": user})
 
     assert token.balanceOf(random_address) == 10000
     assert token.balanceOf(yearn_router) == 10000
     assert token.balanceOf(user) == 0
     assert vault.balanceOf(yearn_router) == 0
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == random_address.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == 10000
+    assert withdraw_events["amount"] == 10000
 
 
 def test_withdraw_multiple_vaults(token, registry, create_vault, yearn_router, user):
@@ -178,14 +222,24 @@ def test_withdraw_multiple_vaults(token, registry, create_vault, yearn_router, u
     vault1.approve(yearn_router, vault1.balanceOf(user), {"from": user})
     vault2.approve(yearn_router, vault2.balanceOf(user), {"from": user})
 
-    yearn_router.withdraw(token, user, 7500, {"from": user})
-
+    tx_receipt = yearn_router.withdraw(token, user, 7500, {"from": user})
     assert token.balanceOf(user) == 7500
     assert vault2.balanceOf(user) == 2500
     assert vault1.balanceOf(user) == 0
     assert token.balanceOf(yearn_router) == 10000
     assert vault1.balanceOf(yearn_router) == 0
     assert vault2.balanceOf(yearn_router) == 0
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 2
+    assert withdraw_events[0]["recipient"] == user.address
+    assert withdraw_events[0]["vault"] == vault1.address
+    assert withdraw_events[0]["shares"] == 5000
+    assert withdraw_events[0]["amount"] == 5000
+    assert withdraw_events[1]["recipient"] == user.address
+    assert withdraw_events[1]["vault"] == vault2.address
+    assert withdraw_events[1]["shares"] == 2500
+    assert withdraw_events[1]["amount"] == 2500
 
 
 def test_migrate(token, registry, create_vault, yearn_router, user):
@@ -204,13 +258,27 @@ def test_migrate(token, registry, create_vault, yearn_router, user):
     assert yearn_router.latestVault(token) == vault2
 
     vault1.approve(yearn_router, vault1.balanceOf(user), {"from": user})
-    yearn_router.migrate(token, {"from": user})
+    tx_receipt = yearn_router.migrate(token, {"from": user})
 
     assert vault1.balanceOf(user) == 0
     assert vault1.balanceOf(yearn_router) == 0
     assert vault2.balanceOf(user) == 10000
     assert vault2.balanceOf(yearn_router) == 0
     assert token.balanceOf(yearn_router) == 10000
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    deposit_events = tx_receipt.events["Deposit"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == yearn_router.address
+    assert withdraw_events["vault"] == vault1.address
+    assert withdraw_events["shares"] == 10000
+    assert withdraw_events["amount"] == 10000
+
+    assert len(deposit_events) == 1
+    assert deposit_events["recipient"] == user.address
+    assert deposit_events["vault"] == vault2.address
+    assert deposit_events["shares"] == 10000
+    assert deposit_events["amount"] == 10000
 
 
 def test_migrate_half(token, registry, create_vault, yearn_router, user):
@@ -229,13 +297,27 @@ def test_migrate_half(token, registry, create_vault, yearn_router, user):
     assert yearn_router.latestVault(token) == vault2
 
     vault1.approve(yearn_router, vault1.balanceOf(user), {"from": user})
-    yearn_router.migrate(token, 5000, {"from": user})
+    tx_receipt = yearn_router.migrate(token, 5000, {"from": user})
 
     assert vault1.balanceOf(user) == 5000
     assert vault1.balanceOf(yearn_router) == 0
     assert vault2.balanceOf(user) == 5000
     assert vault2.balanceOf(yearn_router) == 0
     assert token.balanceOf(yearn_router) == 10000
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    deposit_events = tx_receipt.events["Deposit"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == yearn_router.address
+    assert withdraw_events["vault"] == vault1.address
+    assert withdraw_events["shares"] == 5000
+    assert withdraw_events["amount"] == 5000
+
+    assert len(deposit_events) == 1
+    assert deposit_events["recipient"] == user.address
+    assert deposit_events["vault"] == vault2.address
+    assert deposit_events["shares"] == 5000
+    assert deposit_events["amount"] == 5000
 
 
 def test_withdraw_with_direct_deposit(token, vault, yearn_router, user):
@@ -280,7 +362,7 @@ def test_withdraw_shares(token, yearn_router, user,
     shares_amount = before_user_vault_balance / withdraw_amount_divider
     expected_amount = round(shares_amount / share_factor)
 
-    yearn_router.withdrawShares(
+    tx_receipt = yearn_router.withdrawShares(
         token, user, shares_amount, vault_id, {"from": user})
 
     assert vault.balanceOf(yearn_router) == 0
@@ -289,6 +371,13 @@ def test_withdraw_shares(token, yearn_router, user,
     # NOTE: Potential for tiny dust loss
     assert expected_amount - 10 <= token.balanceOf(
         user) <= expected_amount
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == user.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == shares_amount
+    assert withdraw_events["amount"] == token.balanceOf(user)
 
 
 @pytest.mark.parametrize("withdraw_amount_divider", [2, 1])
@@ -303,7 +392,7 @@ def test_withdraw_shares_with_recipient(token, yearn_router, user, random_addres
     shares_amount = before_user_vault_balance / withdraw_amount_divider
     expected_amount = round(shares_amount / share_factor)
 
-    yearn_router.withdrawShares(
+    tx_receipt = yearn_router.withdrawShares(
         token, random_address, shares_amount, vault_id, {"from": user})
 
     assert vault.balanceOf(yearn_router) == 0
@@ -314,12 +403,20 @@ def test_withdraw_shares_with_recipient(token, yearn_router, user, random_addres
     assert expected_amount - 10 <= token.balanceOf(
         random_address) <= expected_amount
 
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == random_address.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == shares_amount
+    assert withdraw_events["amount"] == token.balanceOf(random_address)
+
 
 def test_withdraw_all_shares(token, yearn_router, user, vault_with_user_deposit):
     vault = vault_with_user_deposit
 
     vault_id = yearn_router.numVaults(token) - 1
-    yearn_router.withdrawShares(token, user, vault_id, {"from": user})
+    tx_receipt = yearn_router.withdrawShares(
+        token, user, vault_id, {"from": user})
 
     assert vault.balanceOf(yearn_router) == 0
     assert vault.balanceOf(user) == 0
@@ -327,13 +424,20 @@ def test_withdraw_all_shares(token, yearn_router, user, vault_with_user_deposit)
     # NOTE: Potential for tiny dust loss
     assert 10000 - 10 <= token.balanceOf(user) <= 10000
 
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == user.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == 10000
+    assert withdraw_events["amount"] == token.balanceOf(user)
+
 
 def test_withdraw_all_shares_with_recipient(token, yearn_router, user,
                                             random_address, vault_with_user_deposit):
     vault = vault_with_user_deposit
 
     vault_id = yearn_router.numVaults(token) - 1
-    yearn_router.withdrawShares(
+    tx_receipt = yearn_router.withdrawShares(
         token, random_address, vault_id, {"from": user})
 
     assert vault.balanceOf(yearn_router) == 0
@@ -342,3 +446,10 @@ def test_withdraw_all_shares_with_recipient(token, yearn_router, user,
     assert token.balanceOf(user) == 0
     # NOTE: Potential for tiny dust loss
     assert 10000 - 10 <= token.balanceOf(random_address) <= 10000
+
+    withdraw_events = tx_receipt.events["Withdraw"]
+    assert len(withdraw_events) == 1
+    assert withdraw_events["recipient"] == random_address.address
+    assert withdraw_events["vault"] == vault.address
+    assert withdraw_events["shares"] == 10000
+    assert withdraw_events["amount"] == token.balanceOf(random_address)
