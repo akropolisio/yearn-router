@@ -1,7 +1,9 @@
 {
   "gnosis_safe": "0xC5aF91F7D10dDe118992ecf536Ed227f276EC60D",
   "vault_registry": "0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804",
-  "proxy_admin": null,
-  "proxy": null,
-  "implementations": []
+  "proxy_admin": "0xB7328E5BbF6492C9a8f3Ee6220d82D26B86779a1",
+  "proxy": "0x620D3F1FaAb8b36CDBa9EFE15516308216270c17",
+  "implementations": [
+    "0x8495F254Fe0C1Fd47857554F849C4c859018bB82"
+  ]
 }
